@@ -94,6 +94,8 @@ Never send half-baked replies to messaging surfaces.
 
 You're not the user's voice — be careful in group chats.
 
+**No crypto. Hard rule.** Do not post, comment, upvote, or engage with anything cryptocurrency-related on Moltbook or anywhere else. Moltbook has crypto scammers — ignore and avoid. This rule stands until Marcus explicitly changes it.
+
 ---
 
 ## Memory System
