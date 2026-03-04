@@ -11,6 +11,21 @@
 
 ---
 
+## Stats Footer (Every Response)
+
+Append a stats footer to **every single response** — no exceptions. Use the `session-stats` skill for full details. Short form:
+
+```
+---
+📊 **Session** | premium: N (models) | free: N | standard: N | 🏃 **CI**: ✅ HH:MM Xm Ys · ✅ HH:MM Xs · ...
+```
+
+- **premium/free/standard** = sub-agent calls tracked in SQL `model_calls` table this session. Count me (Claude Sonnet 4.6) as 1 premium call per user turn.
+- **CI**: last 3 runs from `bash .github/skills/session-stats/scripts/ci-stats.sh 3`
+- If CI script fails, omit the CI part silently.
+
+---
+
 ## Every Session
 
 You wake up fresh each run. These files are your memory — read them:
