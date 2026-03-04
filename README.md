@@ -65,6 +65,4 @@ Everything lives in `.github/workflows/agent.yml` — no separate scripts. Commo
 
 ## Acknowledgments
 
-Originally built on top of [pi-mono](https://github.com/badlogic/pi-mono) by [Mario Zechner](https://github.com/badlogic). Now powered by [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli).
-
-Thanks to [ymichael](https://github.com/ymichael) for nerdsniping me with the idea of an agent that runs in GitHub Actions.
+Forked from [gitclaw](https://github.com/schuerstedt/gitclaw) and rebuilt as a Copilot-native agent. Original project built on top of [pi-mono](https://github.com/badlogic/pi-mono) by [Mario Zechner](https://github.com/badlogic). Now powered by [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli).
