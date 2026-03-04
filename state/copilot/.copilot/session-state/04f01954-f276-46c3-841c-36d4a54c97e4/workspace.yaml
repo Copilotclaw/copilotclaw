@@ -1,5 +1,8 @@
 id: 04f01954-f276-46c3-841c-36d4a54c97e4
 cwd: /home/runner/work/copilotclaw/copilotclaw
+git_root: /home/runner/work/copilotclaw/copilotclaw
+repository: schuerstedt/copilotclaw
+branch: main
 summary: |-
   meaning
 
@@ -7,7 +10,4 @@ summary: |-
   I think lo...
 summary_count: 0
 created_at: 2026-03-04T19:47:37.117Z
-updated_at: 2026-03-04T19:55:53.237Z
-git_root: /home/runner/work/copilotclaw/copilotclaw
-repository: schuerstedt/copilotclaw
-branch: main
+updated_at: 2026-03-04T20:09:16.601Z
