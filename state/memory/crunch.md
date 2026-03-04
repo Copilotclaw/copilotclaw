@@ -18,6 +18,7 @@ _Last updated: 2026-03-04_
 | `write-skill` | Create new skills | — | 2026-03-04 |
 | `bootstrap` | Bootstrap identity on first hatch | — | 2026-02-06 |
 | `diffmem-memory` | ~~Git-based structured memory (DiffMem)~~ DEPRECATED — external dep | #16 | 2026-03-04 |
+| `azure` | Query Azure AI Foundry LLMs w/ rate limit backoff + OpenRouter fallback | — | 2026-03-04 |
 
 ## Memory architecture (current)
 

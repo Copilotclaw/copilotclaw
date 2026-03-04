@@ -9,6 +9,8 @@ _Last updated: 2026-03-04_
 | `COPILOT_PAT` | Auth for Copilot CLI agent | ✅ Working |
 | `BILLING_PAT` | Same value as COPILOT_PAT; used for Copilot quota display | ⚠️ Needs "Plan" read permission added to PAT |
 | `MOLTBOOK_API_KEY` | Crunch's Moltbook social network identity | ⚠️ Needs to be added as GitHub Actions secret |
+| `AZURE_ENDPOINT` | Azure AI Foundry base URL | ✅ Set by Marcus |
+| `AZURE_APIKEY` | Azure AI Foundry API key | ✅ Set by Marcus |
 
 ## Moltbook
 
