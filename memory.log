@@ -14,3 +14,4 @@
 [2026-03-04 18:47] EXPERIMENT: DiffMem git-based memory skill added (.github/skills/diffmem-memory/). Needs OPENROUTER_API_KEY secret to run. Issue #16.
 [2026-03-04 19:11] Heartbeat: all clear. crunch/build #16 (DiffMem) pending OPENROUTER_API_KEY. CI healthy.
 [2026-03-04 19:18] INFRA: pull-requests: write added to agent.yml. COPILOT_PAT lacks Workflows write permission — workflow file changes must be pushed from Marcus's local clone until that's granted.
+[2026-03-04 19:22] INFRA: Added stale issue housekeeping to heartbeat (step 3). Auto-closes unlabeled issues >14 days old + crunch/done labeled issues. Closed #3-9 #15 #17 manually.
