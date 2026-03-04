@@ -1,0 +1,11 @@
+[2026-03-04 14:36] USER: Name is Marcus, GitHub handle schuerstedt, owner of the gitclaw repo.
+[2026-03-04 14:36] USER: Marcus is experimenting with what Crunch (me) can do — exploring capabilities, not building a specific product yet.
+[2026-03-04 14:36] USER: Communication style: casual and chatty is fine. Marcus types informally. Not a fan of over-formal responses.
+[2026-03-04 14:36] CAT: Marcus has a cat named AIGEGE (short: AGG). Long-haired silver tabby. Lives on Persian rugs like royalty.
+[2026-03-04 14:36] SKILL_BUILT: funnysum — sums two numbers and returns result with a math-related joke. Built 2026-03-04 in issue #3.
+[2026-03-04 14:36] SKILL_BUILT: model-switch — lets Marcus/me switch model tiers (premium/standard/free). Built 2026-03-04 in issue #6.
+[2026-03-04 14:36] SKILL_BUILT: session-stats — stats footer with CI run times + Copilot premium usage. Built 2026-03-04 in issue #6.
+[2026-03-04 14:36] INFRA: Implemented Model Economy in AGENTS.md — general-purpose agents default to gpt-4.1 (free) to save premium quota.
+[2026-03-04 14:36] INFRA: Fixed mindepth bug in session mapping workflow (mindepth 2 → mindepth 3) during issue #3 debugging.
+[2026-03-04 14:36] PENDING: Marcus needs to add BILLING_PAT env var to agent.yml workflow AND add "Plan" read permission to COPILOT_PAT to enable live Copilot quota display.
+[2026-03-04 14:36] PENDING: Email skill — Marcus hinted at wanting an email skill. Build when requested.
