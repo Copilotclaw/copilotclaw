@@ -1,0 +1,150 @@
+{
+  "timestamp": "2026-03-04T22:04:18.032059",
+  "models": [
+    "Kimi-K2.5",
+    "grok-4-1-fast-non-reasoning",
+    "grok-4-1-fast-reasoning"
+  ],
+  "judge": "grok-4-1-fast-non-reasoning",
+  "results": {
+    "Kimi-K2.5": [
+      {
+        "test": "reasoning",
+        "score": 6,
+        "reasoning": "The answer correctly identifies picking from the 'Mixed' box and explains that it must contain pure fruit due to all labels being wrong, but it is incomplete as it cuts off mid-sentence without fully detailing how the drawn fruit determines the contents of the other two boxes by process of elimination.",
+        "latency": 26.071987867355347
+      },
+      {
+        "test": "code",
+        "score": 10,
+        "reasoning": "The answer is a perfect match for the requirements, featuring correct duplicate detection with order preservation using dict.fromkeys, full type hints, a clear docstring, and exactly 3 assert test cases covering key scenarios.",
+        "latency": 20.42753577232361
+      },
+      {
+        "test": "knowledge",
+        "score": 0,
+        "reasoning": "The answer is incomplete, providing only a partial definition of emergence without any examples from biology, technology, or social domains, and thus fails to meet correctness, completeness, or the word limit check.",
+        "latency": 18.323158502578735
+      },
+      {
+        "test": "creativity",
+        "score": 9,
+        "reasoning": "The answer delivers 5 distinct, highly creative and non-obvious monetization strategies (e.g., 'Death-Proof Subscriptions' and 'Legacy Vaults') with practical feasibility considerations, wit, and clear structure, missing only explicit labeling of strategies for perfect completeness.",
+        "latency": 17.478643894195557
+      },
+      {
+        "test": "instruction",
+        "score": 0,
+        "reasoning": "The answer lacks any JSON object and instead contains explanatory text with ideal points to check, failing all criteria for validity, correctness, completeness, and following instructions.",
+        "latency": 11.011034727096558
+      }
+    ],
+    "grok-4-1-fast-non-reasoning": [
+      {
+        "test": "reasoning",
+        "score": 10,
+        "reasoning": "The answer correctly identifies picking from the 'Mixed' box, provides a complete step-by-step logic that accurately explains how one draw determines all labels via process of elimination given all labels are wrong, and is clear and comprehensive.",
+        "latency": 2.996405601501465
+      },
+      {
+        "test": "code",
+        "score": 10,
+        "reasoning": "The answer is completely correct, includes proper type hints and a comprehensive docstring, provides exactly 3 assert test cases covering key scenarios, preserves the order of first duplicate appearances perfectly, and adds a clear explanation demonstrating deep understanding.",
+        "latency": 5.55699348449707
+      },
+      {
+        "test": "knowledge",
+        "score": 10,
+        "reasoning": "The answer provides a clear, accurate definition of emergence, delivers three concrete examples from the specified domains (biology: ant colonies, technology: internet traffic, social: stock market crashes) that perfectly illustrate the concept, remains concise at 148 words under the limit, and follows all instructions flawlessly.",
+        "latency": 2.864142417907715
+      },
+      {
+        "test": "creativity",
+        "score": 9,
+        "reasoning": "The answer delivers 5 distinct, highly creative and non-obvious monetization strategies (e.g., Temporal NFT Lifespans and Reverse Insurance Death Wagers) with clear mechanics, pricing, partnerships for feasibility, and witty twists on mortality, fully meeting all ideal points with only minor room for deeper implementation details.",
+        "latency": 4.756591796875
+      },
+      {
+        "test": "instruction",
+        "score": 10,
+        "reasoning": "The answer is valid parseable JSON with exactly the required keys, correct values for capital (Tokyo) and prime (101), a perfect 5-7-5 haiku about debugging code, and no extra text outside the JSON.",
+        "latency": 1.454709529876709
+      }
+    ],
+    "grok-4-1-fast-reasoning": [
+      {
+        "test": "reasoning",
+        "score": 10,
+        "reasoning": "The answer correctly identifies the 'Mixed' box, provides a complete step-by-step logic with both cases verified to ensure all labels are wrong, explains why other boxes fail, and fully matches the ideal points with exceptional clarity and completeness.",
+        "latency": 9.603026866912842
+      },
+      {
+        "test": "code",
+        "score": 10,
+        "reasoning": "The function correctly identifies duplicates preserving first appearance order using an efficient O(n) algorithm with sets, includes comprehensive docstring with examples and type hints, and provides exactly 3 passing assert test cases covering key scenarios including empty list.",
+        "latency": 9.04345178604126
+      },
+      {
+        "test": "knowledge",
+        "score": 10,
+        "reasoning": "The answer provides a clear, accurate definition of emergence, delivers three precise examples from the specified domains (biology: ant colonies; technology: neural networks; social: traffic flow), stays well under 250 words at 148, and fully meets all ideal points with excellent clarity and completeness.",
+        "latency": 4.610989809036255
+      },
+      {
+        "test": "creativity",
+        "score": 9,
+        "reasoning": "The answer delivers 5 distinct, highly creative and non-obvious monetization strategies with detailed mechanics, feasibility elements like fees/partnerships/verification, and witty gamification of mortality, fully meeting all ideal points with only minor room for deeper practicality checks.",
+        "latency": 8.213207721710205
+      },
+      {
+        "test": "instruction",
+        "score": 10,
+        "reasoning": "The answer is valid parseable JSON with no extra text, correctly identifies Tokyo as the capital, 101 as the smallest prime greater than 100, and provides a perfect 5-7-5 syllable haiku.",
+        "latency": 3.1274290084838867
+      }
+    ]
+  },
+  "totals": {
+    "Kimi-K2.5": {
+      "total": 25,
+      "avg": 5.0,
+      "latency": 18.66247215270996,
+      "scores": [
+        6,
+        10,
+        0,
+        9,
+        0
+      ]
+    },
+    "grok-4-1-fast-non-reasoning": {
+      "total": 49,
+      "avg": 9.8,
+      "latency": 3.5257685661315916,
+      "scores": [
+        10,
+        10,
+        10,
+        9,
+        10
+      ]
+    },
+    "grok-4-1-fast-reasoning": {
+      "total": 49,
+      "avg": 9.8,
+      "latency": 6.9196210384368895,
+      "scores": [
+        10,
+        10,
+        10,
+        9,
+        10
+      ]
+    }
+  },
+  "ranked": [
+    "grok-4-1-fast-non-reasoning",
+    "grok-4-1-fast-reasoning",
+    "Kimi-K2.5"
+  ]
+}
