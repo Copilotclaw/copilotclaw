@@ -105,9 +105,15 @@ gh issue list --repo schuerstedt/copilotclaw --state open --label "crunch/review
     done
 ```
 
-### Label unlabeled issues
+### Auto-label unlabeled issues
 
-If an open issue has no labels and isn't obviously stale, give it one. Orphan issues are confusing.
+Run the auto-labeling script — it uses Grok to classify unlabeled issues and applies the right label automatically:
+```bash
+bash .github/scripts/auto-label-issues.sh
+```
+
+This handles: `crunch/build`, `crunch/proposal`, `crunch/research`, `crunch/watch`, `crunch/discuss`.
+Skips structural issues #10 and #11. Runs on every heartbeat.
 
 ---
 
