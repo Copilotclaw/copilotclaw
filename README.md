@@ -63,6 +63,26 @@ Everything lives in `.github/workflows/agent.yml` — no separate scripts. Commo
 - **Trigger:** Adjust the `on:` block to filter by labels, assignees, etc.
 - **AGENTS.md:** Already loaded automatically as custom instructions for the agent.
 
+## Heartbeat
+
+The agent runs on a **30-minute schedule** via `.github/workflows/heartbeat.yml`. Every 30 minutes it:
+
+1. Reads recent memory and scans open `priority/now` issues
+2. Checks CI health
+3. Posts a diary entry to the pinned [🫀 Heartbeat Diary](../../issues/10) issue
+4. Writes anything notable to `memory.log` and commits it
+
+This makes the agent *proactive* — not just reactive to your comments. The `HEARTBEAT.md` file is its checklist.
+
+### Roadmap
+
+| Milestone | Status | What it unlocks |
+|-----------|--------|-----------------|
+| v0.1 — Heartbeat Alive | ✅ Done | Scheduled runs, diary, memory |
+| v0.2 — Issue Spawning | 🔜 Next | Crunch creates its own tasks |
+| v0.3 — Autonomous Skills | 🔮 Planned | Crunch works `crunch/build` issues alone |
+| v0.4 — Email + Comms | 📬 Planned | Daily digest email to you |
+
 ## Acknowledgments
 
 Forked from [gitclaw](https://github.com/schuerstedt/gitclaw) by [@schuerstedt](https://github.com/schuerstedt) and rebuilt as a Copilot-native agent — now living as [copilotclaw](https://github.com/schuerstedt/copilotclaw). Original project built on top of [pi-mono](https://github.com/badlogic/pi-mono) by [Mario Zechner](https://github.com/badlogic). Now powered by [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli).
