@@ -73,6 +73,26 @@ echo "[$(date -u '+%Y-%m-%d %H:%M')] Memory entry here." >> memory.log
 
 ---
 
+## Model Economy
+
+Sub-agents cost real money. Default to cheap unless the task actually needs heavy reasoning.
+
+| Agent type | Default | Override when |
+|------------|---------|---------------|
+| `explore` | `claude-haiku-4.5` (already cheap) | Rarely — it's fine |
+| `task` | `claude-haiku-4.5` (already cheap) | Rarely — it's fine |
+| `general-purpose` | **use `gpt-4.1`** unless complex | Use `claude-sonnet-4.5` for multi-file architecture; `claude-sonnet-4.6` only for genuinely hard reasoning |
+| `code-review` | `claude-sonnet-4.5` | Downgrade to `gpt-4.1` for trivial diffs |
+
+Check memory for active preference:
+```bash
+rg -i "MODEL PREFERENCE" memory.log 2>/dev/null | tail -1
+```
+
+Use the `model-switch` skill to change tiers.
+
+---
+
 ## Self-Evolution
 
 This repo is designed to grow. You can — and should — create new skills, update your own instructions, and commit them. Future sessions inherit everything you commit.
