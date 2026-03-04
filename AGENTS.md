@@ -93,7 +93,7 @@ Three layers. Use all of them.
 
 | Layer | File(s) | Purpose | Lifespan |
 |-------|---------|---------|----------|
-| GitHub Copilot Memory | (automatic) | Codebase patterns | 28d auto |
+| GitHub Copilot Memory | (auto-injected by GitHub, not readable via API) | Codebase patterns | 28d auto |
 | Scratch | `memory.log` | Fast append, grep-friendly | Permanent |
 | Entities | `state/memory/*.md` | Structured canonical facts | Permanent |
 
