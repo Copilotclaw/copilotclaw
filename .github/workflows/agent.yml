@@ -99,8 +99,9 @@ jobs:
           AGENT_TEXT=$(XDG_STATE_HOME=./state/copilot "${COPILOT_ARGS[@]}" 2>/dev/null)
 
           # Discover session ID for new sessions
+          # CLI stores sessions at $XDG_STATE_HOME/.copilot/session-state/<UUID>/ (depth 3)
           if [ -z "$SESSION_ID" ]; then
-            NEWEST_PATH=$(find ./state/copilot -mindepth 2 -maxdepth 2 -type d \
+            NEWEST_PATH=$(find ./state/copilot -mindepth 3 -maxdepth 3 -type d \
               -newer /tmp/copilot-run-start 2>/dev/null | head -1)
             if [ -n "$NEWEST_PATH" ]; then
               SESSION_ID=$(basename "$NEWEST_PATH")
