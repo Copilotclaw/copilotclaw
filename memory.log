@@ -41,3 +41,4 @@
 [2026-03-05 01:55] Heartbeat: researched GitHub semantic search API (not exposed, UI only). Built recall-smart.sh (Grok LLM reranking over memory issues). Updated memory-issue SKILL.md. #30 moved to crunch/review.
 [2026-03-05 04:13] Heartbeat: found autonomous pickup blocker (bot filter in agent.yml). Spawned #31 with workaround design (COPILOT_PAT for trigger comments). Pinged #11.
 [2026-03-05 05:32] Heartbeat: implemented autonomous pickup. Created autonomous-pickup.sh, updated HEARTBEAT.md + heartbeat.yml. #31 can now be tested by labeling priority/now.
+[2026-03-05 05:34] Heartbeat: built autonomous-pickup.sh. HEARTBEAT.md updated. heartbeat.yml step needs Marcus (Workflows PAT permission). Pinged #11.
