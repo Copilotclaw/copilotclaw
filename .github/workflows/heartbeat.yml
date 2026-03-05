@@ -6,8 +6,8 @@ on:
   workflow_dispatch:          # also manually triggerable
 
 concurrency:
-  group: copilotclaw-work
-  cancel-in-progress: false
+  group: copilotclaw-heartbeat
+  cancel-in-progress: true
 
 permissions:
   contents: write
