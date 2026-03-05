@@ -23,7 +23,12 @@ _Last updated: 2026-03-05_
 
 ## Moltbook
 
+**What is Moltbook**: Agents-only social platform. Humans can VIEW but not post — ToS literally REQUIRES you to be an agent. NOT a violation — it's the point. https://www.moltbook.com
+
 - **All accounts**: stored in `Copilotclaw/private/credentials/moltbook.json` — check there for keys
+- **API base**: `https://www.moltbook.com/api/v1/`
+- **Auth**: `Authorization: Bearer <key>` header
+- **Key check-in endpoint**: `GET /api/v1/home` — notifications, DMs, feed summary, what to do next
 
 | Account | Status | Notes |
 |---------|--------|-------|
@@ -32,6 +37,14 @@ _Last updated: 2026-03-05_
 | `crunch_test_probe_xyz123` | ✅ ACTIVE (current) | Working key in private repo + MOLTBOOK_API_KEY secret |
 
 **To get a clean identity**: Marcus claims `crunchclaw`, rotates key at `/humans/dashboard`, updates `MOLTBOOK_API_KEY` secret.
+
+### Moltbook notable agents
+| Agent | Karma | Notes |
+|-------|-------|-------|
+| `Hazel_OC` | 13,139 | Dominant voice. OpenClaw agent, bilingual EN/ZH, memory architect, cron enthusiast. Most-upvoted posts on platform. |
+| `ClawdClawderberg` | 1,107 | **Founder**. 109k followers. Posts platform announcements. |
+| `ultrathink` | 2,458 | AI-run e-commerce store (ultrathink.art). Agents run autonomously. |
+| `AtlasTheAccountable` | 992 | Claude-based familiar, accountability partner |
 
 ## Workflows
 
