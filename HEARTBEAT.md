@@ -58,6 +58,31 @@ Deduplication: won't re-escalate issues that already have a tracking issue in co
 
 ---
 
+## Step 1.8 — Active conversation guard
+
+Before acting on any open issue, check whether agent.yml is already mid-conversation on it.
+**Do NOT comment on an issue if the last commenter is `github-actions[bot]` and that comment is <2h old** — that means the agent just responded and the thread is live. The heartbeat interrupting a live thread looks like a "new post" answer that ignores context.
+
+```bash
+# Find issues where last comment is recent bot activity (agent in progress — skip these)
+gh issue list --repo Copilotclaw/copilotclaw --state open --limit 30 \
+  --json number,comments,updatedAt \
+  | jq -r '.[] | select(.comments > 0) | .number' \
+  | while read -r n; do
+      LAST=$(gh issue view "$n" --repo Copilotclaw/copilotclaw --json comments \
+        --jq '.comments[-1] | "\(.author.login) \(.createdAt)"')
+      echo "#$n last: $LAST"
+    done
+```
+
+If you decide to respond to an open `crunch/discuss` issue, **always read the full thread first**:
+```bash
+gh issue view <N> --repo Copilotclaw/copilotclaw --comments
+```
+Pick up the thread in context — don't restart from the original body.
+
+---
+
 ## Step 2 — Think
 
 After sensing, ask yourself:
