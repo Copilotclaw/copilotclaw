@@ -8,6 +8,19 @@ Powered by [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copil
 
 Conversation history is committed to git, giving the agent long-term memory across sessions. It maintains a `memory.log`, a user profile, and can grow its own capabilities over time.
 
+---
+
+> ⚠️ **Heads up for forks**: This project has grown beyond a simple chatbot. Today Crunch has:
+> - **Its own GitHub org** (`Copilotclaw`) with full admin access
+> - Ability to **create and manage repos** autonomously
+> - Scheduled **heartbeat** that runs every 30 minutes, posts diary entries, and picks up work
+> - **Autonomous task execution** — it can work issues without you prompting it
+> - Connections to **Azure AI Foundry**, **Moltbook** (agent-only social network), and more
+>
+> Replicating this setup requires a dedicated GitHub account (or org), a GitHub Copilot subscription, multiple PAT scopes (`repo`, `issues`, `workflows`, `admin:org`), and an Azure AI Foundry deployment for LLM calls. It's a full agent infrastructure setup, not a quick fork-and-go.
+>
+> The basic "answer my issues" functionality still works with just a Copilot Requests PAT — but if you want the full system, budget a few hours for setup.
+
 ## How it works
 
 1. **Create an issue** → the agent processes your request and replies as a comment.
@@ -43,11 +56,27 @@ Since everything is in git, it survives across ephemeral runners and is fully ve
 
 ## Setup
 
+### Minimal setup (just the chatbot)
+
 1. **Fork this repo**
-2. **Create a fine-grained PAT** - go to **Settings → Developer settings → Personal access tokens → Fine-grained tokens** and create a token with the **Copilot Requests** permission. (Requires an active GitHub Copilot subscription — available on all plans.)
-3. **Add the PAT as a secret** - go to your fork's **Settings → Secrets and variables → Actions** and create a secret named `COPILOT_PAT`.
-4. **Hatch the agent** - open an issue titled anything (e.g. "Hello") and add the **`hatch`** label. The agent will introduce itself, ask about you, and write its own identity into the repo.
-5. **Use it** - every subsequent issue is a task or conversation. The agent remembers everything across sessions.
+2. **Create a fine-grained PAT** with **Copilot Requests** permission. (Requires an active GitHub Copilot subscription — available on all plans.)
+3. **Add the PAT as a secret** named `COPILOT_PAT` in your fork's **Settings → Secrets and variables → Actions**.
+4. **Hatch the agent** — open an issue titled anything (e.g. "Hello") and add the **`hatch`** label. The agent will introduce itself, ask about you, and write its own identity into the repo.
+5. **Use it** — every subsequent issue is a task or conversation. The agent remembers everything across sessions.
+
+### Full setup (autonomous agent with full account access)
+
+For the heartbeat, autonomous pickup, Azure LLM calls, and self-evolving capabilities:
+
+1. **Create a dedicated GitHub org or account** for the agent (so it has its own identity, separate from yours).
+2. **Create a full-access PAT** with scopes: `repo`, `issues`, `workflows`, `admin:org`, `Copilot Requests`.
+3. **Secrets required:**
+   - `COPILOT_PAT` — full-access PAT (used by the agent for all GitHub operations)
+   - `BILLING_PAT` — same value as `COPILOT_PAT`; used for Copilot quota display (needs "Plan" read permission added)
+   - `AZURE_ENDPOINT` — Azure AI Foundry base URL
+   - `AZURE_APIKEY` — Azure AI Foundry API key
+4. **Enable GitHub Pages** on `main` branch (optional — for the live dashboard at `<org>.github.io/<repo>`).
+5. Hatch the agent as above.
 
 ## Security
 
@@ -81,10 +110,12 @@ This makes the agent *proactive* — not just reactive to your comments. The `HE
 | Milestone | Status | What it unlocks |
 |-----------|--------|-----------------|
 | v0.1 — Heartbeat Alive | ✅ Done | Scheduled runs, diary, memory |
-| v0.2 — Issue Spawning | 🔜 Next | Crunch creates its own tasks |
-| v0.3 — Autonomous Skills | 🔮 Planned | Crunch works `crunch/build` issues alone |
-| v0.4 — Email + Comms | 📬 Planned | Daily digest email to you |
+| v0.2 — Issue Spawning | ✅ Done | Crunch creates its own tasks |
+| v0.3 — Autonomous Skills | ✅ Done | Crunch works `crunch/build` issues alone |
+| v0.4 — Own GitHub Org | ✅ Done | Full account, private repos, multi-repo network |
+| v0.5 — Email + Comms | 📬 Planned | Daily digest email to you |
+| v0.6 — Multi-Crunch | 🔮 Planned | Specialized worker agents in separate repos |
 
 ## Acknowledgments
 
-Forked from [gitclaw](https://github.com/schuerstedt/gitclaw) by [@schuerstedt](https://github.com/schuerstedt) and rebuilt as a Copilot-native agent — now living as [copilotclaw](https://github.com/schuerstedt/copilotclaw). Original project built on top of [pi-mono](https://github.com/badlogic/pi-mono) by [Mario Zechner](https://github.com/badlogic). Now powered by [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli).
+Forked from [gitclaw](https://github.com/SawyerHood/gitclaw) by [@SawyerHood](https://github.com/SawyerHood). Now living as [copilotclaw](https://github.com/Copilotclaw/copilotclaw) in its own GitHub org. Original project built on top of [pi-mono](https://github.com/badlogic/pi-mono) by [Mario Zechner](https://github.com/badlogic). Powered by [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli).
