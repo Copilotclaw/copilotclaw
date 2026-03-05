@@ -16,6 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Autonomous pickup
+        env:
+          BILLING_PAT: ${{ secrets.COPILOT_PAT }}
+        run: bash .github/scripts/autonomous-pickup.sh
+
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
 
