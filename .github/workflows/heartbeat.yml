@@ -45,6 +45,11 @@ jobs:
             exit 1
           fi
 
+      - name: Sub-repo scan
+        env:
+          BILLING_PAT: ${{ secrets.COPILOT_PAT }}
+        run: bash .github/scripts/sub-repo-scan.sh
+
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
 
