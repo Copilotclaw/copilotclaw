@@ -5,9 +5,16 @@ on:
     types: [opened]
   issue_comment:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process (for manual testing of split-job)'
+        required: true
+        type: string
 
+# Workflow-level concurrency: per-issue serialization (same issue queues, different issues run in parallel)
 concurrency:
-  group: copilotclaw-issue-${{ github.event.issue.number }}
+  group: copilotclaw-issue-${{ github.event.issue.number || inputs.issue_number }}
   cancel-in-progress: false
 
 permissions:
@@ -17,9 +24,12 @@ permissions:
   pull-requests: write
 
 jobs:
-  run-agent:
+  # Job 1: Heavy work (parallel across issues). Runs agent, stages changes, uploads artifacts.
+  work:
+    name: Run agent
     runs-on: ubuntu-latest
     if: >
+      github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issues' &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
@@ -29,23 +39,33 @@ jobs:
         github.event.comment.user.login != 'github-actions[bot]' &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
       )
+    outputs:
+      issue_number: ${{ steps.vars.outputs.issue_number }}
+      has_changes: ${{ steps.stage.outputs.has_changes }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Resolve issue number
+        id: vars
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "issue_number=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "issue_number=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Validate COPILOT_PAT
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          ISSUE_NUMBER=${{ steps.vars.outputs.issue_number }}
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${COPILOT_GITHUB_TOKEN}" \
             https://api.github.com/user)
           if [ "$HTTP_STATUS" != "200" ]; then
-            ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
             gh issue comment "$ISSUE_NUMBER" \
               --body "🚨 **COPILOT_PAT is invalid (HTTP ${HTTP_STATUS})** — Crunch is offline until the secret is regenerated. Fix: https://github.com/settings/tokens → update secret at https://github.com/Copilotclaw/copilotclaw/settings/secrets/actions"
-            # Create alert issue (deduped by title)
             EXISTING=$(gh issue list --label bug --state open \
               --search "COPILOT_PAT expired" --json number --jq '.[0].number' 2>/dev/null || true)
             if [ -z "$EXISTING" ]; then
@@ -61,16 +81,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
+          ISSUE_NUMBER=${{ steps.vars.outputs.issue_number }}
           if [ "$GITHUB_EVENT_NAME" = "issue_comment" ]; then
             COMMENT_ID=$(jq -r '.comment.id' "$GITHUB_EVENT_PATH")
             REACTION_ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID/reactions" \
-              -f content=eyes --jq '.id')
+              -f content=eyes --jq '.id' 2>/dev/null || true)
             printf 'reaction_target=comment\nreaction_id=%s\ncomment_id=%s\n' \
               "$REACTION_ID" "$COMMENT_ID" > /tmp/reaction-state.env
           else
             REACTION_ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/reactions" \
-              -f content=eyes --jq '.id')
+              -f content=eyes --jq '.id' 2>/dev/null || true)
             printf 'reaction_target=issue\nreaction_id=%s\n' \
               "$REACTION_ID" > /tmp/reaction-state.env
           fi
@@ -80,116 +100,164 @@ jobs:
 
       - name: Run agent
         env:
-          # Fine-grained PAT with "Copilot Requests" permission
-          # https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli#authenticating-with-a-personal-access-token
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
-          BILLING_PAT: ${{ secrets.COPILOT_PAT }}   # ← add this line
+          BILLING_PAT: ${{ secrets.COPILOT_PAT }}
           COPILOT_ALLOW_ALL: "true"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
           AZURE_APIKEY: ${{ secrets.AZURE_APIKEY }}
         run: |
           set -euo pipefail
+          ISSUE_NUMBER=${{ steps.vars.outputs.issue_number }}
 
-          # Authenticate gh CLI with the Copilot PAT
-          # GITHUB_TOKEN must be unset first or gh auth login refuses to store credentials
           _GITHUB_TOKEN="$GITHUB_TOKEN"
           unset GITHUB_TOKEN
           echo "$COPILOT_GITHUB_TOKEN" | gh auth login --with-token
-          export GITHUB_TOKEN="$_GITHUB_TOKEN"  # restore for remaining gh commands
+          export GITHUB_TOKEN="$_GITHUB_TOKEN"
 
-          ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
-
-          # Fetch issue
           TITLE=$(gh issue view "$ISSUE_NUMBER" --json title --jq '.title')
           BODY=$(gh issue view "$ISSUE_NUMBER" --json body --jq '.body')
 
-          # Resolve session
           mkdir -p state/issues state/copilot
           MAPPING_FILE="state/issues/${ISSUE_NUMBER}.json"
           SESSION_ID=""
           if [ -f "$MAPPING_FILE" ]; then
             SESSION_ID=$(jq -r '.sessionId // empty' "$MAPPING_FILE")
-            if [ -n "$SESSION_ID" ]; then
-              echo "Resuming session: $SESSION_ID"
-            else
-              echo "No session ID in mapping, starting fresh"
-            fi
-          else
-            echo "No session mapping found, starting fresh"
+            [ -n "$SESSION_ID" ] && echo "Resuming session: $SESSION_ID"
           fi
 
-          # Configure git
           git config user.name "gitclaw[bot]"
           git config user.email "gitclaw[bot]@users.noreply.github.com"
 
-          # Build prompt
           if [ "$GITHUB_EVENT_NAME" = "issue_comment" ]; then
             PROMPT=$(jq -r '.comment.body' "$GITHUB_EVENT_PATH")
           else
             PROMPT=$(printf '%s\n\n%s' "$TITLE" "$BODY")
           fi
 
-          # Run agent
           touch /tmp/copilot-run-start
           COPILOT_ARGS=(copilot --allow-all -s -p "$PROMPT")
-          if [ -n "$SESSION_ID" ]; then
-            COPILOT_ARGS+=(--resume "$SESSION_ID")
-          fi
+          [ -n "$SESSION_ID" ] && COPILOT_ARGS+=(--resume "$SESSION_ID")
           AGENT_TEXT=$(XDG_STATE_HOME=./state/copilot "${COPILOT_ARGS[@]}" 2>/tmp/copilot-stderr.txt) || true
           if [ -z "$AGENT_TEXT" ] && [ -s /tmp/copilot-stderr.txt ]; then
             echo "=== copilot CLI stderr ===" && cat /tmp/copilot-stderr.txt
           fi
 
-          # Discover session ID for new sessions
-          # CLI stores sessions at $XDG_STATE_HOME/.copilot/session-state/<UUID>/ (depth 3)
           if [ -z "$SESSION_ID" ]; then
             NEWEST_PATH=$(find ./state/copilot -mindepth 3 -maxdepth 3 -type d \
               -newer /tmp/copilot-run-start 2>/dev/null | head -1)
             if [ -n "$NEWEST_PATH" ]; then
               SESSION_ID=$(basename "$NEWEST_PATH")
               echo "New session ID: $SESSION_ID"
-            else
-              echo "Warning: could not determine session ID"
             fi
           fi
 
-          # Save session mapping
           if [ -n "$SESSION_ID" ]; then
             jq -n --argjson n "$ISSUE_NUMBER" --arg id "$SESSION_ID" \
               --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
               '{issueNumber: $n, sessionId: $id, updatedAt: $ts}' > "$MAPPING_FILE"
-            echo "Saved mapping: issue #$ISSUE_NUMBER -> $SESSION_ID"
           fi
 
-          # Commit and push
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "gitclaw: work on issue #$ISSUE_NUMBER"
-          fi
-          for i in 1 2 3; do
-            if git push origin main; then break; fi
-            echo "Push failed, rebasing and retrying ($i/3)..."
-            git pull --rebase origin main || { git rebase --abort; break; }
-          done
-
-          # Comment on issue
           if [ -z "$AGENT_TEXT" ]; then
             AGENT_TEXT="🦃 Crunch: agent ran but returned no output. Check Actions logs for details (copilot CLI may have auth issues with the PAT)."
           fi
           printf '%s' "$AGENT_TEXT" | head -c 60000 > /tmp/agent-response.txt
-          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/agent-response.txt
 
-      - name: Remove eyes reaction
-        if: always()
+      - name: Stage changes
+        id: stage
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            touch /tmp/agent-staged.patch  # empty placeholder
+          else
+            git diff --cached > /tmp/agent-staged.patch
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload work artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-work-${{ github.run_id }}
+          path: |
+            /tmp/agent-response.txt
+            /tmp/agent-staged.patch
+            /tmp/reaction-state.env
+          retention-days: 1
+
+      - name: Remove eyes reaction on failure
+        if: failure()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           [ -f /tmp/reaction-state.env ] || exit 0
           # shellcheck disable=SC1091
           source /tmp/reaction-state.env
-          ISSUE_NUMBER=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
+          ISSUE_NUMBER=${{ steps.vars.outputs.issue_number }}
+          if [ "$reaction_target" = "comment" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/${comment_id}/reactions/${reaction_id}" \
+              -X DELETE || true
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/${ISSUE_NUMBER}/reactions/${reaction_id}" \
+              -X DELETE || true
+          fi
+
+  # Job 2: Serialized write (global crunch-write concurrency group).
+  # All agents from all issues queue here — only one pushes to main at a time.
+  write:
+    name: Commit and respond
+    needs: work
+    runs-on: ubuntu-latest
+    concurrency:
+      group: crunch-write
+      cancel-in-progress: false
+    env:
+      ISSUE_NUMBER: ${{ needs.work.outputs.issue_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download work artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: agent-work-${{ github.run_id }}
+          path: /tmp/agent-artifacts/
+
+      - name: Apply changes and push
+        if: needs.work.outputs.has_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "gitclaw[bot]"
+          git config user.email "gitclaw[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+
+          # Apply the staged diff from the work job (--3way handles context drift gracefully)
+          git apply --3way /tmp/agent-artifacts/agent-staged.patch
+          git add -A
+          git commit -m "gitclaw: work on issue #$ISSUE_NUMBER"
+
+          # Push — serialized by crunch-write concurrency group, but still retry for safety
+          for i in 1 2 3; do
+            if git push origin main; then break; fi
+            echo "Push failed, rebasing and retrying ($i/3)..."
+            git pull --rebase origin main || { git rebase --abort; break; }
+          done
+
+      - name: Post comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --body-file /tmp/agent-artifacts/agent-response.txt
+
+      - name: Remove eyes reaction
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -f /tmp/agent-artifacts/reaction-state.env ] || exit 0
+          # shellcheck disable=SC1091
+          source /tmp/agent-artifacts/reaction-state.env
           if [ "$reaction_target" = "comment" ]; then
             gh api "repos/$GITHUB_REPOSITORY/issues/comments/${comment_id}/reactions/${reaction_id}" \
               -X DELETE || true
