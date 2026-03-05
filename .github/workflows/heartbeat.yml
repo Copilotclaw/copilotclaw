@@ -13,10 +13,6 @@ permissions:
   contents: write
   issues: write
 
-concurrency:
-  group: copilotclaw-work
-  cancel-in-progress: false
-
 jobs:
   heartbeat:
     runs-on: ubuntu-latest
