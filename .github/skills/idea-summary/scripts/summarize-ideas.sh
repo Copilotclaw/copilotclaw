@@ -67,7 +67,14 @@ SUMMARY=$(python3 "$LLM" \
 
 $IDEAS_TEXT
 
-Write a 'Summary' section for the README that captures the big themes and most exciting ideas. Max 400 words." 2>/dev/null)
+Write a 'Summary' section for the README that captures the big themes and most exciting ideas. Max 400 words." 2>/dev/null | python3 -c "
+import re, sys
+content = sys.stdin.read()
+content = re.sub(r'^\[model: [^\]]+\]\s*\n?', '', content)
+content = re.sub(r'^\x60{3}(?:markdown)?\s*\n(.*?)\n\x60{3}\s*$', r'\1', content, flags=re.DOTALL|re.MULTILINE)
+content = re.sub(r'\n\*\(.*?\)\*\s*$', '', content, flags=re.DOTALL|re.MULTILINE)
+print(content.strip())
+" 2>/dev/null)
 
 if [[ -z "$SUMMARY" ]]; then
   echo "summarize-ideas: LLM returned empty summary, falling back to count-only" >&2
