@@ -36,6 +36,10 @@ The script:
 ## Recall memories
 
 ```bash
+# Semantic recall (Grok LLM reranks all memories — best for vague or conceptual queries)
+# Requires: AZURE_ENDPOINT + AZURE_APIKEY. Falls back to text search if unavailable.
+bash .github/skills/memory-issue/scripts/recall-smart.sh "what was the cat's name"
+
 # Keyword search across all memories
 bash .github/skills/memory-issue/scripts/recall.sh "search query"
 
