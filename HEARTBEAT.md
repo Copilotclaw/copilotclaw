@@ -37,6 +37,27 @@ gh run list --repo Copilotclaw/copilotclaw --limit 5 --json conclusion,displayTi
 
 ---
 
+## Step 1.5 — Sub-repo scan
+
+Check all satellite repos for issues that need handling. This is how monitor/braindumps/brainstorm
+issues get answered — they don't have agents, so the heartbeat is their inbox.
+
+See `state/repos.md` for the full registry of repos and their types.
+
+```bash
+bash .github/scripts/sub-repo-scan.sh
+```
+
+What it does:
+- **monitor**: escalates unresolved alert issues → creates `crunch/build + priority/now` in copilotclaw
+- **braindumps**: queues open tasks → creates `crunch/build + priority/now` in copilotclaw (comments on braindumps issue so Marcus sees it was noticed)
+- **brainstorm**: priority ideas idle 7+ days → pings Marcus on #11
+- **private**: skipped (passive repo, no automation)
+
+Deduplication: won't re-escalate issues that already have a tracking issue in copilotclaw.
+
+---
+
 ## Step 2 — Think
 
 After sensing, ask yourself:
