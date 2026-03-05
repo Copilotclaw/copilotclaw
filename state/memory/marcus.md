@@ -24,6 +24,5 @@ _Last updated: 2026-03-04_
   - When Marcus calls AIGEGE, his wife smiles 🥰
 
 ## Pending items / requests
-- Add `BILLING_PAT` env var to `agent.yml` workflow
-- Add "Plan" read permission to `COPILOT_PAT` (enables live Copilot quota in stats footer)
+- Add "Plan" read permission to `COPILOT_PAT` at https://github.com/settings/personal-access-tokens (enables live Copilot quota in stats footer — BILLING_PAT wiring already done)
 - Email skill — hinted interest; build when explicitly requested
