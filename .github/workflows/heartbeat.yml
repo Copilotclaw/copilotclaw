@@ -50,6 +50,13 @@ jobs:
           BILLING_PAT: ${{ secrets.COPILOT_PAT }}
         run: bash .github/scripts/sub-repo-scan.sh
 
+      - name: Auto-label unlabeled issues
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+          AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
+          AZURE_APIKEY: ${{ secrets.AZURE_APIKEY }}
+        run: bash .github/scripts/auto-label-issues.sh
+
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
 
