@@ -39,3 +39,4 @@
 [2026-03-04 18:52] WORKFLOW: Branch-first for all experiments. Never experiment on main. exp/ prefix for pure experiments.
 [2026-03-04 23:40] Heartbeat: merged experimental-mindset, closed #29 (pages done), spawned #30 (semantic memory recall). CI healthy.
 [2026-03-05 01:55] Heartbeat: researched GitHub semantic search API (not exposed, UI only). Built recall-smart.sh (Grok LLM reranking over memory issues). Updated memory-issue SKILL.md. #30 moved to crunch/review.
+[2026-03-05 04:13] Heartbeat: found autonomous pickup blocker (bot filter in agent.yml). Spawned #31 with workaround design (COPILOT_PAT for trigger comments). Pinged #11.
