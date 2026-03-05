@@ -16,6 +16,10 @@ permissions:
   actions: write
   pull-requests: write
 
+concurrency:
+  group: copilotclaw-work
+  cancel-in-progress: false
+
 jobs:
   run-agent:
     runs-on: ubuntu-latest
