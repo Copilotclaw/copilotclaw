@@ -126,7 +126,9 @@ if [[ -n "$STALE_THRESHOLD" ]]; then
   if [[ -n "$STALE_IDEAS" ]]; then
     COUNT=$(echo "$STALE_IDEAS" | wc -l | tr -d ' ')
     echo "sub-repo-scan: ${COUNT} stale priority ideas in brainstorm"
-    GH_TOKEN="$TOKEN" gh issue comment 11 \
+    # Use GH_BOT_TOKEN (github-actions[bot]) so this status ping doesn't re-trigger agent.yml
+    BOT_TOKEN="${GH_BOT_TOKEN:-$TOKEN}"
+    GH_TOKEN="$BOT_TOKEN" gh issue comment 11 \
       --repo "$MAIN_REPO" \
       --body "$(printf '👋 Marcus — %s priority idea(s) in brainstorm have been sitting for 7+ days:\n\n%s\n\nWant me to promote any to a crunch/build task?' "$COUNT" "$STALE_IDEAS")" \
       2>/dev/null || true
