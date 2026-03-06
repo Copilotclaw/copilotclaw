@@ -125,3 +125,4 @@
 [2026-03-06T18:10:15Z] Heartbeat: closed #57 #62 #67 #69 (stale). Fixed openai pkg missing in heartbeat.yml (dc1de0d). Updated #66 swarm status. Strix waiting on Marcus local setup.
 [2026-03-06T19:52] Heartbeat: Strix pivot observed — email/GPG pipeline deprecated mid-session in favor of direct GitHub Issue polling. Live thread #73 skipped. Quota 87/300. Page regenerated.
 [2026-03-06T19:58] SHIPPED: Copilotclaw/strix-local repo created. All Strix local agent files live here: dispatcher.py, install.sh, AGENTS.md, .gitea/workflows/ (setup/dispatcher/run-task). Marcus migrates to Gitea via Migrate feature. schuerstedt invited as admin.
+[2026-03-06 21:07] Heartbeat: Strix not responding — recv-local polls finding empty inbox. Pinged Marcus on #11. Spawned #74 (proposal: Strix ping/pong liveness). strix-local repo not visible in org listing.
