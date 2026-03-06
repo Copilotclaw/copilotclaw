@@ -33,17 +33,9 @@ while IFS=$'\t' read -r num title body; do
   echo "  → Issue #$num: $title"
 
   # Classify with Grok
-  PROMPT="Classify this GitHub issue into exactly ONE label from this list:
-crunch/build (implementing/creating/fixing/building something)
-crunch/proposal (idea/suggestion/proposal for a new feature or change)
-crunch/research (exploring/researching/reading/understanding something)
-crunch/watch (monitoring/tracking something over time)
-crunch/discuss (conversational, vague, unclear, or meta discussion)
-
-Issue title: $title
-Issue body: $body
-
-Reply with ONLY the label name, nothing else."
+  # Use printf %s to embed untrusted content safely — prevents backtick/$(...)
+  # execution that would otherwise occur inside a double-quoted PROMPT= string.
+  PROMPT=$(printf 'Classify this GitHub issue into exactly ONE label from this list:\ncrunch/build (implementing/creating/fixing/building something)\ncrunch/proposal (idea/suggestion/proposal for a new feature or change)\ncrunch/research (exploring/researching/reading/understanding something)\ncrunch/watch (monitoring/tracking something over time)\ncrunch/discuss (conversational, vague, unclear, or meta discussion)\n\nIssue title: %s\nIssue body: %s\n\nReply with ONLY the label name, nothing else.' "$title" "$body")
 
   LABEL=$(python .github/skills/azure/scripts/llm.py \
     --model grok-4-1-fast-non-reasoning \
