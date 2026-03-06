@@ -63,6 +63,9 @@ jobs:
           GH_BOT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash .github/scripts/sub-repo-scan.sh
 
+      - name: Install Python deps
+        run: pip install openai --quiet
+
       - name: Auto-label unlabeled issues
         env:
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
