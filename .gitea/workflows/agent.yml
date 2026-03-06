@@ -1,0 +1,110 @@
+name: Local Agent
+
+# Processes local Gitea issues using Claude CLI.
+# If the issue originated online (has <!-- online-origin: URL -->),
+# the final answer is also posted back to the original GitHub issue.
+#
+# Triggers on any new issue. Add label "skip-agent" to suppress.
+
+on:
+  issues:
+    types: [opened]
+
+concurrency:
+  group: agent-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.issue.labels.*.name, 'skip-agent') &&
+      github.event.issue.user.login != gitea.actor
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Claude CLI
+        run: |
+          # Install Claude Code CLI (Anthropic's local agent CLI)
+          npm install -g @anthropic-ai/claude-code --quiet 2>/dev/null \
+            || pip install anthropic --quiet
+
+      - name: Process issue
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITEA_URL: ${{ vars.GITEA_URL }}
+          GITEA_TOKEN: ${{ gitea.token }}
+          LOCAL_REPO: ${{ gitea.repository }}
+          ONLINE_PAT: ${{ secrets.ONLINE_PAT }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          export SYSTEM_PROMPT=$(cat AGENTS.md 2>/dev/null || echo "You are a helpful local AI agent.")
+          export PROMPT="# Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}
+
+${ISSUE_BODY}"
+
+          echo "Processing issue #${ISSUE_NUMBER}..."
+
+          # Try claude CLI first, fall back to Python anthropic library
+          if command -v claude &>/dev/null; then
+            RESULT=$(printf '%s\n\n%s' "$SYSTEM_PROMPT" "$PROMPT" | claude --print 2>/dev/null)
+          else
+            RESULT=$(python3 - <<'PYEOF'
+import anthropic, os
+
+client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+msg = client.messages.create(
+    model="claude-opus-4-5",
+    max_tokens=8096,
+    system=os.environ.get("SYSTEM_PROMPT", "You are a helpful local AI agent."),
+    messages=[{"role": "user", "content": os.environ["PROMPT"]}],
+)
+print(msg.content[0].text)
+PYEOF
+)
+          fi
+
+          if [ -z "$RESULT" ]; then
+            echo "Agent returned empty response — aborting."
+            exit 1
+          fi
+
+          # Post result as local Gitea comment
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GITEA_TOKEN" \
+            -H "Content-Type: application/json" \
+            "${GITEA_URL}/api/v1/repos/${LOCAL_REPO}/issues/${ISSUE_NUMBER}/comments" \
+            -d "$(jq -n --arg body "$RESULT" '{body: $body}')"
+
+          echo "✅ Posted local comment on #${ISSUE_NUMBER}"
+
+          # If issue was synced from online, post back to origin
+          ONLINE_URL=$(echo "$ISSUE_BODY" | grep -oP '<!-- online-origin: \K[^ >]+(?= -->)' || true)
+
+          if [ -n "$ONLINE_URL" ] && [ -n "${ONLINE_PAT:-}" ]; then
+            ONLINE_REPO=$(echo "$ONLINE_URL" | sed 's|https://github.com/||; s|/issues/.*||')
+            ONLINE_NUM=$(echo "$ONLINE_URL" | grep -oP '/issues/\K[0-9]+')
+
+            REPLY=$(printf '**[Local Agent]**\n\n%s' "$RESULT")
+
+            curl -sf -X POST \
+              -H "Authorization: Bearer $ONLINE_PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${ONLINE_REPO}/issues/${ONLINE_NUM}/comments" \
+              -d "$(jq -n --arg body "$REPLY" '{body: $body}')"
+
+            echo "✅ Posted reply to online issue ${ONLINE_URL}"
+          fi
+
+          # Close the local issue (work done)
+          curl -sf -X PATCH \
+            -H "Authorization: Bearer $GITEA_TOKEN" \
+            -H "Content-Type: application/json" \
+            "${GITEA_URL}/api/v1/repos/${LOCAL_REPO}/issues/${ISSUE_NUMBER}" \
+            -d '{"state":"closed"}' > /dev/null
+
+          echo "✅ Issue #${ISSUE_NUMBER} closed."

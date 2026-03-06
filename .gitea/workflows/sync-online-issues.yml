@@ -1,0 +1,82 @@
+name: Sync Online Issues
+
+# Polls the online GitHub repo for open issues.
+# For each issue not yet synced locally, creates a Gitea issue with
+# an origin marker so the local agent can post results back online.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync issues from GitHub
+        env:
+          ONLINE_REPO: ${{ vars.ONLINE_REPO }}        # e.g. copilotclaw/copilotclaw
+          ONLINE_PAT: ${{ secrets.ONLINE_PAT }}        # GitHub PAT with issues:read
+          GITEA_URL: ${{ vars.GITEA_URL }}             # e.g. http://localhost:3000
+          GITEA_TOKEN: ${{ gitea.token }}
+          LOCAL_REPO: ${{ gitea.repository }}
+        run: |
+          set -euo pipefail
+
+          echo "Fetching issues from $ONLINE_REPO..."
+          issues=$(curl -sf \
+            -H "Authorization: Bearer $ONLINE_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${ONLINE_REPO}/issues?state=open&per_page=50" \
+            | jq -c '.[] | select(.pull_request == null)')
+
+          if [ -z "$issues" ]; then
+            echo "No open issues found online."
+            exit 0
+          fi
+
+          # Fetch existing local issues to check for duplicates
+          local_issues=$(curl -sf \
+            -H "Authorization: Bearer $GITEA_TOKEN" \
+            "${GITEA_URL}/api/v1/repos/${LOCAL_REPO}/issues?type=issues&state=open&limit=50&page=1" \
+            || echo "[]")
+
+          echo "$issues" | while IFS= read -r issue; do
+            [ -z "$issue" ] && continue
+
+            number=$(echo "$issue" | jq -r '.number')
+            title=$(echo "$issue"  | jq -r '.title')
+            body=$(echo "$issue"   | jq -r '.body // ""')
+            url=$(echo "$issue"    | jq -r '.html_url')
+            labels=$(echo "$issue" | jq -r '[.labels[].name] | join(", ")')
+
+            # Skip if already synced (look for the origin marker)
+            already=$(echo "$local_issues" \
+              | jq -r --arg marker "online-origin: $url" \
+                '.[] | select(.body != null and (.body | contains($marker))) | .number' \
+              | head -1)
+
+            if [ -n "$already" ]; then
+              echo "Already synced #$number → local #$already"
+              continue
+            fi
+
+            # Build local issue body with origin metadata embedded
+            synced_body=$(printf '%s\n\n---\n🔗 **Synced from**: %s\n<!-- online-origin: %s -->' \
+              "$body" "$url" "$url")
+
+            payload=$(jq -n \
+              --arg title  "$title" \
+              --arg body   "$synced_body" \
+              --argjson labels '["online-origin"]' \
+              '{title: $title, body: $body, labels: $labels}')
+
+            result=$(curl -sf -X POST \
+              -H "Authorization: Bearer $GITEA_TOKEN" \
+              -H "Content-Type: application/json" \
+              "${GITEA_URL}/api/v1/repos/${LOCAL_REPO}/issues" \
+              -d "$payload")
+
+            local_num=$(echo "$result" | jq -r '.number')
+            echo "✅ Synced online #$number → local #$local_num: $title"
+          done
