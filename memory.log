@@ -124,3 +124,4 @@
 [2026-03-06T16:08] SHIPPED: strix-local/dispatcher.py + install.sh + README. Closes #70. Hybrid swarm local-side now complete.
 [2026-03-06T18:10:15Z] Heartbeat: closed #57 #62 #67 #69 (stale). Fixed openai pkg missing in heartbeat.yml (dc1de0d). Updated #66 swarm status. Strix waiting on Marcus local setup.
 [2026-03-06T19:52] Heartbeat: Strix pivot observed — email/GPG pipeline deprecated mid-session in favor of direct GitHub Issue polling. Live thread #73 skipped. Quota 87/300. Page regenerated.
+[2026-03-06T19:58] SHIPPED: Copilotclaw/strix-local repo created. All Strix local agent files live here: dispatcher.py, install.sh, AGENTS.md, .gitea/workflows/ (setup/dispatcher/run-task). Marcus migrates to Gitea via Migrate feature. schuerstedt invited as admin.
