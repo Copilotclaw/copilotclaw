@@ -1,90 +1,88 @@
-name: "📬 Receive from Strix (Local)"
+name: Receive Results from Local (Strix)
 
-# Poll Strix's return inbox every 5 minutes
 on:
   schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch: {}
+    - cron: '*/5 * * * *'  # Poll every 5 minutes
+  workflow_dispatch:
 
 concurrency:
-  group: recv-local
-  cancel-in-progress: false
+  group: claw-recv-local
+  cancel-in-progress: true
 
 permissions:
-  issues: write
   contents: read
+  issues: write
 
 jobs:
-  recv:
+  receive:
     runs-on: ubuntu-latest
-
     steps:
-      - name: "📥 Poll inbox and process results"
-        env:
-          CLOUD_GPG_PRIVATE_KEY: ${{ secrets.CLOUD_GPG_PRIVATE_KEY }}
-          STRIX_GPG_PUBLIC_KEY: ${{ secrets.STRIX_GPG_PUBLIC_KEY }}
-          STRIX_GPG_FINGERPRINT: ${{ secrets.STRIX_GPG_FINGERPRINT }}
-          CLOUD_EMAIL: ${{ secrets.CLOUD_EMAIL }}
-          CLOUD_EMAIL_PASSWORD: ${{ secrets.CLOUD_EMAIL_PASSWORD }}
-          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
-          GH_TOKEN: ${{ secrets.BILLING_PAT }}
-          REPO: ${{ github.repository }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
         run: |
-          set -euo pipefail
-          pip install python-gnupg 2>/dev/null | tail -1
+          sudo apt-get install -y gpg python3-pip
+          pip3 install python-gnupg
 
-          python3 << 'PYEOF'
-          import gnupg
-          import imaplib
-          import email as email_lib
-          import json
-          import os
-          import re
-          import tempfile
-          import subprocess
-          from datetime import datetime, timezone
+      - name: Import Strix local GPG public key
+        env:
+          CLAW_LOCAL_GPG_PUBLIC: ${{ secrets.CLAW_LOCAL_GPG_PUBLIC }}
+        run: |
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          echo "$CLAW_LOCAL_GPG_PUBLIC" | gpg --batch --import
+          echo "Strix public key imported"
 
-          # Setup GPG
-          gnupghome = tempfile.mkdtemp()
-          gpg = gnupg.GPG(gnupghome=gnupghome)
-          gpg.import_keys(os.environ['CLOUD_GPG_PRIVATE_KEY'])
-          gpg.import_keys(os.environ['STRIX_GPG_PUBLIC_KEY'])
+      - name: Check inbox for Strix results
+        env:
+          CLAW_CLOUD_EMAIL: ${{ secrets.CLAW_CLOUD_EMAIL }}
+          CLAW_CLOUD_EMAIL_PASS: ${{ secrets.CLAW_CLOUD_EMAIL_PASS }}
+          CLAW_IMAP_HOST: ${{ secrets.CLAW_IMAP_HOST }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PYEOF'
+          import imaplib, email, os, json, subprocess, re, sys
 
-          strix_fp = os.environ['STRIX_GPG_FINGERPRINT']
+          IMAP_HOST = os.environ['CLAW_IMAP_HOST']
+          EMAIL = os.environ['CLAW_CLOUD_EMAIL']
+          PASSWORD = os.environ['CLAW_CLOUD_EMAIL_PASS']
 
-          # Connect to IMAP
-          smtp_host = os.environ['EMAIL_SMTP_HOST']
-          imap = imaplib.IMAP4_SSL(smtp_host, 993)
-          imap.login(os.environ['CLOUD_EMAIL'], os.environ['CLOUD_EMAIL_PASSWORD'])
-          imap.select('INBOX')
+          print(f"Connecting to {IMAP_HOST}:993...")
+          mail = imaplib.IMAP4_SSL(IMAP_HOST, 993)
+          mail.login(EMAIL, PASSWORD)
+          mail.select('INBOX')
 
-          # Search for Strix result emails
-          _, msg_ids = imap.search(None, 'SUBJECT "CLAW_RESULT:" UNSEEN')
-          msg_id_list = msg_ids[0].split()
+          # Search for unread CLAW_RESULT emails from Strix
+          _, data = mail.search(None, 'UNSEEN SUBJECT "CLAW_RESULT:"')
+          msg_ids = data[0].split()
 
-          if not msg_id_list:
-              print("📭 No new results from Strix")
-              imap.logout()
-              exit(0)
+          if not msg_ids:
+              print("No new results from Strix.")
+              sys.exit(0)
 
-          print(f"📬 Found {len(msg_id_list)} result(s) from Strix")
-          repo = os.environ['REPO']
-          gh_token = os.environ['GH_TOKEN']
+          print(f"Found {len(msg_ids)} new result(s) from Strix")
 
-          for mid in msg_id_list:
-              _, msg_data = imap.fetch(mid, '(RFC822)')
-              msg = email_lib.message_from_bytes(msg_data[0][1])
+          for msg_id in msg_ids:
+              _, msg_data = mail.fetch(msg_id, '(RFC822)')
+              raw_email = msg_data[0][1]
+              msg = email.message_from_bytes(raw_email)
+
               subject = msg.get('Subject', '')
+              issue_header = msg.get('X-CLAW-Issue', '')
+              print(f"Processing: {subject} (issue #{issue_header})")
 
-              # Extract issue number from subject: CLAW_RESULT: GH-42 ...
-              m = re.search(r'GH-(\d+)', subject)
-              if not m:
-                  print(f"⚠️ Cannot parse issue number from: {subject}")
+              # Extract issue number from subject or header
+              issue_num = issue_header
+              if not issue_num:
+                  m = re.search(r'#(\d+)', subject)
+                  if m:
+                      issue_num = m.group(1)
+
+              if not issue_num:
+                  print(f"  Warning: no issue number found, skipping")
                   continue
 
-              issue_number = m.group(1)
-
-              # Get body
+              # Get email body
               body = ''
               if msg.is_multipart():
                   for part in msg.walk():
@@ -94,65 +92,66 @@ jobs:
               else:
                   body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
 
+              # Write signed body to temp file for GPG verification
+              with open('/tmp/strix-result.asc', 'w') as f:
+                  f.write(body)
+
               # Verify GPG signature
-              verify = gpg.verify(body)
-              if not verify.valid:
-                  print(f"⚠️ Signature verification FAILED for issue #{issue_number}: {verify.status}")
-                  # Still process but flag as unverified
-                  sig_badge = "⚠️ **Unverified signature**"
-              else:
-                  fp = verify.fingerprint
-                  if not strix_fp.endswith(fp[-16:]):
-                      print(f"⚠️ Signature from unknown key {fp}, expected {strix_fp}")
-                      sig_badge = "⚠️ **Unknown signer**"
-                  else:
-                      sig_badge = "🔐 **Strix-signed** ✅"
-
-              # Extract JSON payload from clearsigned message
-              try:
-                  # Strip PGP armor to get JSON
-                  lines = body.split('\n')
-                  json_start = next(i for i, l in enumerate(lines) if l.strip().startswith('{'))
-                  json_end = next(i for i, l in enumerate(lines) if l.strip() == '-----BEGIN PGP SIGNATURE-----')
-                  payload_json = '\n'.join(lines[json_start:json_end])
-                  payload = json.loads(payload_json)
-              except Exception as e:
-                  print(f"⚠️ Could not parse payload: {e}")
-                  payload = {"result": body[:2000], "status": "unknown"}
-
-              result_text = payload.get('result', '(no result)')
-              status = payload.get('status', 'unknown')
-              model_used = payload.get('model_used', 'unknown')
-              elapsed = payload.get('elapsed_seconds', '?')
-
-              sep = "---"
-              comment = f"🦉 **Strix reports back** — {sig_badge}\n\n{result_text}\n\n{sep}\n*Task: GH-{issue_number} | Model: {model_used} | Elapsed: {elapsed}s | Status: {status}*"
-
-              # Post comment to GitHub issue
-              import urllib.request
-              data = json.dumps({"body": comment}).encode()
-              req = urllib.request.Request(
-                  f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments",
-                  data=data, method="POST",
-                  headers={"Authorization": f"token {gh_token}", "Content-Type": "application/json"}
+              result = subprocess.run(
+                  ['gpg', '--batch', '--verify', '/tmp/strix-result.asc'],
+                  capture_output=True, text=True
               )
-              with urllib.request.urlopen(req) as resp:
-                  print(f"  Posted result to issue #{issue_number}: {resp.status}")
 
-              if status == 'done':
-                  # Close the issue
-                  close_data = json.dumps({"state": "closed"}).encode()
-                  req2 = urllib.request.Request(
-                      f"https://api.github.com/repos/{repo}/issues/{issue_number}",
-                      data=close_data, method="PATCH",
-                      headers={"Authorization": f"token {gh_token}", "Content-Type": "application/json"}
-                  )
-                  with urllib.request.urlopen(req2) as resp:
-                      print(f"  Closed issue #{issue_number}: {resp.status}")
+              if result.returncode != 0:
+                  print(f"  ⚠️ GPG verification FAILED for issue #{issue_num}: {result.stderr}")
+                  # Post warning to issue
+                  subprocess.run(['gh', 'issue', 'comment', issue_num,
+                      '--body', f'⚠️ Received result from local agent but GPG signature verification FAILED. Result discarded for security. Check Strix key configuration.\n\nGPG error: `{result.stderr[:500]}`'],
+                      env={**os.environ})
+                  continue
+
+              print(f"  ✅ GPG signature valid for issue #{issue_num}")
+
+              # Extract the signed content (strip GPG armor)
+              signed_content = subprocess.run(
+                  ['gpg', '--batch', '--output', '-', '--decrypt', '/tmp/strix-result.asc'],
+                  capture_output=True, text=True
+              )
+
+              result_text = signed_content.stdout if signed_content.stdout else body
+
+              # Try to parse as JSON for structured results
+              result_body = result_text
+              close_issue = False
+              try:
+                  # Look for JSON in the content
+                  json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
+                  if json_match:
+                      result_json = json.loads(json_match.group())
+                      result_body = result_json.get('result', result_text)
+                      close_issue = result_json.get('status') == 'done'
+              except Exception:
+                  pass
+
+              # Post result to GitHub issue
+              comment = f"🦉 **Strix (local agent) result:**\n\n{result_body}\n\n---\n_Verified PGP signature from Strix local agent ✅_"
+              with open('/tmp/strix-comment.txt', 'w') as f:
+                  f.write(comment[:60000])
+
+              subprocess.run(['gh', 'issue', 'comment', issue_num,
+                  '--body-file', '/tmp/strix-comment.txt'],
+                  env={**os.environ})
+
+              if close_issue:
+                  subprocess.run(['gh', 'issue', 'close', issue_num,
+                      '--comment', '✅ Completed by Strix local agent'],
+                      env={**os.environ})
+                  print(f"  Closed issue #{issue_num}")
 
               # Mark email as read
-              imap.store(mid, '+FLAGS', '\\Seen')
+              mail.store(msg_id, '+FLAGS', '\\Seen')
+              print(f"  ✅ Processed result for issue #{issue_num}")
 
-          imap.logout()
-          print(f"✅ Processed {len(msg_id_list)} result(s)")
+          mail.close()
+          mail.logout()
           PYEOF
