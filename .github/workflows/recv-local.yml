@@ -1,0 +1,158 @@
+name: "📬 Receive from Strix (Local)"
+
+# Poll Strix's return inbox every 5 minutes
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: recv-local
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  recv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Poll inbox and process results"
+        env:
+          CLOUD_GPG_PRIVATE_KEY: ${{ secrets.CLOUD_GPG_PRIVATE_KEY }}
+          STRIX_GPG_PUBLIC_KEY: ${{ secrets.STRIX_GPG_PUBLIC_KEY }}
+          STRIX_GPG_FINGERPRINT: ${{ secrets.STRIX_GPG_FINGERPRINT }}
+          CLOUD_EMAIL: ${{ secrets.CLOUD_EMAIL }}
+          CLOUD_EMAIL_PASSWORD: ${{ secrets.CLOUD_EMAIL_PASSWORD }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          GH_TOKEN: ${{ secrets.BILLING_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          pip install python-gnupg 2>/dev/null | tail -1
+
+          python3 << 'PYEOF'
+          import gnupg
+          import imaplib
+          import email as email_lib
+          import json
+          import os
+          import re
+          import tempfile
+          import subprocess
+          from datetime import datetime, timezone
+
+          # Setup GPG
+          gnupghome = tempfile.mkdtemp()
+          gpg = gnupg.GPG(gnupghome=gnupghome)
+          gpg.import_keys(os.environ['CLOUD_GPG_PRIVATE_KEY'])
+          gpg.import_keys(os.environ['STRIX_GPG_PUBLIC_KEY'])
+
+          strix_fp = os.environ['STRIX_GPG_FINGERPRINT']
+
+          # Connect to IMAP
+          smtp_host = os.environ['EMAIL_SMTP_HOST']
+          imap = imaplib.IMAP4_SSL(smtp_host, 993)
+          imap.login(os.environ['CLOUD_EMAIL'], os.environ['CLOUD_EMAIL_PASSWORD'])
+          imap.select('INBOX')
+
+          # Search for Strix result emails
+          _, msg_ids = imap.search(None, 'SUBJECT "CLAW_RESULT:" UNSEEN')
+          msg_id_list = msg_ids[0].split()
+
+          if not msg_id_list:
+              print("📭 No new results from Strix")
+              imap.logout()
+              exit(0)
+
+          print(f"📬 Found {len(msg_id_list)} result(s) from Strix")
+          repo = os.environ['REPO']
+          gh_token = os.environ['GH_TOKEN']
+
+          for mid in msg_id_list:
+              _, msg_data = imap.fetch(mid, '(RFC822)')
+              msg = email_lib.message_from_bytes(msg_data[0][1])
+              subject = msg.get('Subject', '')
+
+              # Extract issue number from subject: CLAW_RESULT: GH-42 ...
+              m = re.search(r'GH-(\d+)', subject)
+              if not m:
+                  print(f"⚠️ Cannot parse issue number from: {subject}")
+                  continue
+
+              issue_number = m.group(1)
+
+              # Get body
+              body = ''
+              if msg.is_multipart():
+                  for part in msg.walk():
+                      if part.get_content_type() == 'text/plain':
+                          body = part.get_payload(decode=True).decode('utf-8', errors='replace')
+                          break
+              else:
+                  body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
+
+              # Verify GPG signature
+              verify = gpg.verify(body)
+              if not verify.valid:
+                  print(f"⚠️ Signature verification FAILED for issue #{issue_number}: {verify.status}")
+                  # Still process but flag as unverified
+                  sig_badge = "⚠️ **Unverified signature**"
+              else:
+                  fp = verify.fingerprint
+                  if not strix_fp.endswith(fp[-16:]):
+                      print(f"⚠️ Signature from unknown key {fp}, expected {strix_fp}")
+                      sig_badge = "⚠️ **Unknown signer**"
+                  else:
+                      sig_badge = "🔐 **Strix-signed** ✅"
+
+              # Extract JSON payload from clearsigned message
+              try:
+                  # Strip PGP armor to get JSON
+                  lines = body.split('\n')
+                  json_start = next(i for i, l in enumerate(lines) if l.strip().startswith('{'))
+                  json_end = next(i for i, l in enumerate(lines) if l.strip() == '-----BEGIN PGP SIGNATURE-----')
+                  payload_json = '\n'.join(lines[json_start:json_end])
+                  payload = json.loads(payload_json)
+              except Exception as e:
+                  print(f"⚠️ Could not parse payload: {e}")
+                  payload = {"result": body[:2000], "status": "unknown"}
+
+              result_text = payload.get('result', '(no result)')
+              status = payload.get('status', 'unknown')
+              model_used = payload.get('model_used', 'unknown')
+              elapsed = payload.get('elapsed_seconds', '?')
+
+              sep = "---"
+              comment = f"🦉 **Strix reports back** — {sig_badge}\n\n{result_text}\n\n{sep}\n*Task: GH-{issue_number} | Model: {model_used} | Elapsed: {elapsed}s | Status: {status}*"
+
+              # Post comment to GitHub issue
+              import urllib.request
+              data = json.dumps({"body": comment}).encode()
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments",
+                  data=data, method="POST",
+                  headers={"Authorization": f"token {gh_token}", "Content-Type": "application/json"}
+              )
+              with urllib.request.urlopen(req) as resp:
+                  print(f"  Posted result to issue #{issue_number}: {resp.status}")
+
+              if status == 'done':
+                  # Close the issue
+                  close_data = json.dumps({"state": "closed"}).encode()
+                  req2 = urllib.request.Request(
+                      f"https://api.github.com/repos/{repo}/issues/{issue_number}",
+                      data=close_data, method="PATCH",
+                      headers={"Authorization": f"token {gh_token}", "Content-Type": "application/json"}
+                  )
+                  with urllib.request.urlopen(req2) as resp:
+                      print(f"  Closed issue #{issue_number}: {resp.status}")
+
+              # Mark email as read
+              imap.store(mid, '+FLAGS', '\\Seen')
+
+          imap.logout()
+          print(f"✅ Processed {len(msg_id_list)} result(s)")
+          PYEOF
