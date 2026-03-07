@@ -204,3 +204,7 @@ SHIPPED: .github/scripts/lib/ — platform.py + 4 scripts. Works on GitHub+Gitea
 [2026-03-07T13:53:22Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
 [2026-03-07 13:53] Heartbeat: CI healthy. Quota 41%. Spawned #89 (VPS bootstrap script). Marcus close to buying VPS. No priority/now issues.
 [2026-03-07T13:53:35Z] HOOK:SessionEnd reason=complete
+[2026-03-07T14:51:21Z] HOOK:SessionStart source=new
+[2026-03-07T14:54:15Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
+[2026-03-07T14:54:18Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
+[2026-03-07 14:53] Heartbeat: built local/bootstrap.sh (VPS ready-script for #89). CI healthy. Quota 42%.
