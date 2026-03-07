@@ -1,0 +1,68 @@
+name: Azure Cosmos DB Provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: 'Azure resource group name'
+        required: false
+        default: 'crunch-persistent'
+      location:
+        description: 'Azure region'
+        required: false
+        default: 'northeurope'
+      cosmos_account:
+        description: 'Cosmos DB account name (globally unique)'
+        required: false
+        default: 'crunch-memory'
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Azure CLI
+        run: |
+          which az && az version || (curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash)
+
+      - name: Provision Cosmos DB
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          COSMOS_ACCOUNT: ${{ inputs.cosmos_account }}
+        run: |
+          chmod +x .github/scripts/provision-cosmos.sh
+          .github/scripts/provision-cosmos.sh
+
+      - name: Test Cosmos DB round-trip
+        env:
+          COSMOS_ENDPOINT: ${{ env.COSMOS_ENDPOINT }}
+          COSMOS_KEY: ${{ env.COSMOS_KEY }}
+        run: |
+          python3 .github/scripts/cosmos-test.py
+
+      - name: Post success to issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+          COSMOS_ENDPOINT: ${{ env.COSMOS_ENDPOINT }}
+        run: |
+          gh issue comment 84 \
+            --repo Copilotclaw/copilotclaw \
+            --body "$(printf '🎉 **Cosmos DB provisioned and tested!**\n\n- **Endpoint**: `%s`\n- **Round-trip test**: ✅ write + read verified\n\n**Next step**: Add `COSMOS_ENDPOINT` and `COSMOS_KEY` as repo secrets:\n```\ngh secret set COSMOS_ENDPOINT --body "%s" --repo Copilotclaw/copilotclaw\ngh secret set COSMOS_KEY --body "$(az cosmosdb keys list --name crunch-memory --resource-group crunch-persistent --query primaryMasterKey -o tsv)" --repo Copilotclaw/copilotclaw\n```\nThen Crunch can write memories from every heartbeat and agent session. 🦃' "$COSMOS_ENDPOINT" "$COSMOS_ENDPOINT")"
+
+      - name: Post failure to issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+        run: |
+          gh issue comment 84 \
+            --repo Copilotclaw/copilotclaw \
+            --body "❌ **Cosmos DB provisioning failed** — check [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
