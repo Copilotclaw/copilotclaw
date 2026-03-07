@@ -121,3 +121,41 @@
 > Every premium call is a heartbeat. Use free models for anything that doesn't need premium reasoning.
 > Azure grok is nearly free. Use it for summaries, analysis, text generation.
 > Save premium for: direct user conversation, complex multi-file reasoning.
+
+## MCP Toolset Targeting (2026-03-07)
+
+**Problem**: `copilot --allow-all` loads the full GitHub MCP server (all toolsets) by default, injecting massive tool schemas into model context — wasteful, especially for free/cheap models.
+
+**Solution**: Use `--add-github-mcp-toolset` to replace the default with targeted toolsets. Note: each flag REPLACES the default (not adds to it), so specify all needed toolsets.
+
+**Heartbeat toolsets** (predictable: diary, issue scan, memory):
+```bash
+copilot --allow-all \
+  --add-github-mcp-toolset issues \
+  --add-github-mcp-toolset repos \
+  --add-github-mcp-toolset actions \
+  --add-github-mcp-toolset labels \
+  -s -p "$PROMPT"
+```
+
+**Agent toolsets** (general user requests):
+```bash
+copilot --allow-all \
+  --add-github-mcp-toolset issues \
+  --add-github-mcp-toolset repos \
+  --add-github-mcp-toolset pull_requests \
+  --add-github-mcp-toolset actions \
+  --add-github-mcp-toolset labels \
+  --add-github-mcp-toolset search \
+  -s -p "$PROMPT"
+```
+
+**Available toolsets**: all, actions, code_security, copilot, dependabot, discussions, gists, git, issues, labels, notifications, orgs, projects, pull_requests, repos, search, users, secret_protection
+
+**Other useful flags**:
+- `--available-tools [TOOLS...]` — whitelist specific CLI built-in tools only  
+- `--excluded-tools [TOOLS...]` — blacklist specific tools  
+- `--disable-builtin-mcps` — disable GitHub MCP entirely  
+- `--no-ask-user` — programmatic mode, no interactive prompts  
+
+**Rule**: Less context = better focus = better results, especially on free models (gpt-4.1, grok).
