@@ -211,3 +211,4 @@ SHIPPED: .github/scripts/lib/ — platform.py + 4 scripts. Works on GitHub+Gitea
 [2026-03-07T14:54:36Z] HOOK:SessionEnd reason=complete
 [2026-03-07T15:42:50Z] HOOK:SessionStart source=new
 [2026-03-07 15:47] Heartbeat: built Spark liveness (#90) — spark.py daemon now posts beats every 30m, cloud check in heartbeat.yml alerts on #11 if silent >70m. Quota 43%.
+[2026-03-07T15:47:52Z] HOOK:SessionEnd reason=complete
