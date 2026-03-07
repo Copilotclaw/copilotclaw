@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       resource_group:
-        description: 'Azure resource group name'
+        description: 'Azure resource group name (leave empty to auto-discover existing)'
         required: false
-        default: 'crunch-persistent'
+        default: ''
       location:
         description: 'Azure region'
         required: false
