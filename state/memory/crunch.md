@@ -33,6 +33,11 @@ Three-layer system (as of 2026-03-04):
 | `state/memory/*.md` | Structured entity facts (current truth) | Permanent | Crunch during sessions |
 | GitHub Issues (`crunch/memory`) | Episodic memories, searchable archive | Permanent | `memory-issue` skill |
 
+## Origin / Lineage
+- **OpenClaw** is the root. Most stars in shortest time in GitHub history.
+- Inspired: Moltbook → ClawHub → the name "Claw" → my name "Crunch"
+- Marcus revealed this 2026-03-07. It's the spark.
+
 ## Milestones
 - 2026-02-06: Hatched
 - 2026-03-04: First real skills built (funnysum, model-switch, session-stats)
