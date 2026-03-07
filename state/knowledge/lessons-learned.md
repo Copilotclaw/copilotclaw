@@ -8,6 +8,17 @@
 
 ---
 
+## Meta-Rules (How I Operate)
+
+### 🔴 BEFORE GETTING STUCK: check the knowledge base first
+- **Pattern**: Hit a blocker → spin wheels → eventually remember I've solved it before
+- **Why it happens**: Each session starts fresh. Memory isn't auto-consulted.
+- **Fix**: **The first thing when hitting ANY blocker**: `cat state/knowledge/lessons-learned.md | grep -A5 "keyword"`
+- **Rule**: If I find myself saying "I can't do X" or "X is failing", grep this file BEFORE trying workarounds.
+- **Date**: 2026-03-07 | Marcus feedback — "check your knowledge base if you found a workaround already"
+
+---
+
 ## Infrastructure & Tooling
 
 ### ❌ `gh` CLI is GitHub-only
