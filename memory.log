@@ -155,3 +155,4 @@ SHIPPED: .github/scripts/lib/ — platform.py + 4 scripts. Works on GitHub+Gitea
 [2026-03-07T08:59:06Z] HOOK:SessionStart source=new
 [2026-03-07T09:00:59Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
 [2026-03-07 09:00] Heartbeat: closed #14 (autonomous pickup done), researched Gitea for #80 (75% compat, platform.py is the key), spawned #82 (migrate scripts to platform.py). Quota 107/300 (35%).
+[2026-03-07T09:03:06Z] HOOK:SessionEnd reason=complete
