@@ -235,3 +235,6 @@ SHIPPED: .github/scripts/lib/ — platform.py + 4 scripts. Works on GitHub+Gitea
 [2026-03-07T16:58:17Z] HOOK:SessionEnd reason=complete
 [2026-03-07T17:00:33Z] HOOK:SessionStart source=new
 [2026-03-07T17:00:47Z] HOOK:SessionEnd reason=complete
+[2026-03-07T17:44:07Z] HOOK:SessionStart source=new
+[2026-03-07T17:50:24Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
+[2026-03-07T17:44Z] Heartbeat: Closed #78 (Spark heartbeat shipped). Spawned #95 (Spark task fallback). PR #94 clean+mergeable. Quota 48%.
