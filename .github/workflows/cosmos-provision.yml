@@ -1,0 +1,145 @@
+name: 🏗️ Provision Cosmos DB Memory Layer
+
+on:
+  workflow_dispatch:
+    inputs:
+      account_name:
+        description: "Cosmos DB account name (globally unique, 3-44 chars, lowercase/hyphens)"
+        required: false
+        default: "crunch-memory"
+      resource_group:
+        description: "Azure resource group name"
+        required: false
+        default: "crunch-memory-rg"
+      location:
+        description: "Azure region"
+        required: false
+        default: "eastus"
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    name: Provision Cosmos DB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create resource group
+        run: |
+          az group create \
+            --name "${{ inputs.resource_group }}" \
+            --location "${{ inputs.location }}" \
+            --output none
+          echo "✅ Resource group: ${{ inputs.resource_group }}"
+
+      - name: Create Cosmos DB account (free tier, NoSQL)
+        run: |
+          EXISTING=$(az cosmosdb show \
+            --name "${{ inputs.account_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --query name --output tsv 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "ℹ️ Cosmos DB account '${{ inputs.account_name }}' already exists — skipping creation"
+          else
+            az cosmosdb create \
+              --name "${{ inputs.account_name }}" \
+              --resource-group "${{ inputs.resource_group }}" \
+              --kind GlobalDocumentDB \
+              --enable-free-tier true \
+              --default-consistency-level Session \
+              --locations regionName="${{ inputs.location }}" failoverPriority=0 isZoneRedundant=false \
+              --output none
+            echo "✅ Cosmos DB account created: ${{ inputs.account_name }}"
+          fi
+
+      - name: Create database 'crunch'
+        run: |
+          EXISTING=$(az cosmosdb sql database show \
+            --account-name "${{ inputs.account_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --name crunch \
+            --query name --output tsv 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "ℹ️ Database 'crunch' already exists — skipping"
+          else
+            az cosmosdb sql database create \
+              --account-name "${{ inputs.account_name }}" \
+              --resource-group "${{ inputs.resource_group }}" \
+              --name crunch \
+              --throughput 400 \
+              --output none
+            echo "✅ Database 'crunch' created"
+          fi
+
+      - name: Create container 'memories'
+        run: |
+          EXISTING=$(az cosmosdb sql container show \
+            --account-name "${{ inputs.account_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --database-name crunch \
+            --name memories \
+            --query name --output tsv 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "ℹ️ Container 'memories' already exists — skipping"
+          else
+            az cosmosdb sql container create \
+              --account-name "${{ inputs.account_name }}" \
+              --resource-group "${{ inputs.resource_group }}" \
+              --database-name crunch \
+              --name memories \
+              --partition-key-path /type \
+              --output none
+            echo "✅ Container 'memories' created (partition key: /type)"
+          fi
+
+      - name: Retrieve endpoint and key
+        run: |
+          ENDPOINT=$(az cosmosdb show \
+            --name "${{ inputs.account_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --query documentEndpoint \
+            --output tsv)
+
+          KEY=$(az cosmosdb keys list \
+            --name "${{ inputs.account_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --query primaryMasterKey \
+            --output tsv)
+
+          echo "COSMOS_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
+          echo "COSMOS_KEY=$KEY" >> $GITHUB_ENV
+          echo "✅ Endpoint: $ENDPOINT"
+
+      - name: Store secrets in GitHub repo
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+        run: |
+          gh secret set COSMOS_ENDPOINT --body "$COSMOS_ENDPOINT" --repo Copilotclaw/copilotclaw
+          gh secret set COSMOS_KEY --body "$COSMOS_KEY" --repo Copilotclaw/copilotclaw
+          echo "✅ Secrets stored: COSMOS_ENDPOINT + COSMOS_KEY"
+
+      - name: Summary
+        run: |
+          echo "## 🏗️ Cosmos DB Provisioning Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Account | ${{ inputs.account_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource Group | ${{ inputs.resource_group }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Location | ${{ inputs.location }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Database | crunch |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container | memories |" >> $GITHUB_STEP_SUMMARY
+          echo "| Partition key | /type |" >> $GITHUB_STEP_SUMMARY
+          echo "| Throughput | 400 RU/s (free tier: 1000 RU/s max) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secrets set | COSMOS_ENDPOINT, COSMOS_KEY |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for Phase 1 integration — heartbeat writes, session reads." >> $GITHUB_STEP_SUMMARY
