@@ -278,3 +278,6 @@ SHIPPED: .github/scripts/lib/ — platform.py + 4 scripts. Works on GitHub+Gitea
 2026-03-07T19:57Z Merged PR #85 (Cosmos DB skill) and PR #94 (Spark: double-post fix, skills, memory, monitor). PR #94 had spark.py conflict resolved by keeping --monitor/--remember/--recall handlers.
 [2026-03-07T20:04:10Z] HOOK:SessionEnd reason=complete
 [2026-03-07T20:06:34Z] HOOK:SessionEnd reason=complete
+[2026-03-07T20:50:19Z] HOOK:SessionStart source=new
+[2026-03-07T20:53:16Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
+[2026-03-07 20:52] Heartbeat: Spark inbox #104 claimed. Built spark-inbox-scan.sh (was missing). Wired into heartbeat. Quota 56%.
