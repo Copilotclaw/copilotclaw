@@ -149,7 +149,12 @@ jobs:
 
           mkdir -p state/copilot
           touch /tmp/copilot-run-start
-          AGENT_TEXT=$(XDG_STATE_HOME=./state/copilot copilot --allow-all -s -p "$PROMPT" 2>/dev/null) || true
+          AGENT_TEXT=$(XDG_STATE_HOME=./state/copilot copilot --allow-all \
+            --add-github-mcp-toolset issues \
+            --add-github-mcp-toolset repos \
+            --add-github-mcp-toolset actions \
+            --add-github-mcp-toolset labels \
+            -s -p "$PROMPT" 2>/dev/null) || true
 
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add -A
