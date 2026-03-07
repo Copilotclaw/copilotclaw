@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths:
       - "local/spark/**"
+  schedule:
+    - cron: "*/2 * * * *"  # poll GitHub every 2 min for spark/ready issues
 
 # One job per issue, same issue serialized
 concurrency:
@@ -19,6 +21,7 @@ jobs:
     runs-on: self-hosted  # your local act_runner
     if: |
       github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
       contains(fromJSON('["spark/ready","dispatch/local"]'), github.event.label.name)
 
     steps:
