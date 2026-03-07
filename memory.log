@@ -275,3 +275,5 @@ SHIPPED: .github/scripts/lib/ — platform.py + 4 scripts. Works on GitHub+Gitea
 [2026-03-07T19:55:39Z] HOOK:SessionStart source=new
 [2026-03-07T19:58:09Z] HOOK:ToolFailure tool=bash result=failure msg=Command blocked: contains dangerous shell expansion patterns (e.g., parameter transformation, indirect expansion, or nested command substitution) that could enable arbitrary code execution. Please rew
 [2026-03-07T19:58Z] Merging PR94 assets: skills/ dir + docs + Gitea workflow. spark.py kept at 724-line local version.
+2026-03-07T19:57Z Merged PR #85 (Cosmos DB skill) and PR #94 (Spark: double-post fix, skills, memory, monitor). PR #94 had spark.py conflict resolved by keeping --monitor/--remember/--recall handlers.
+[2026-03-07T20:04:10Z] HOOK:SessionEnd reason=complete
